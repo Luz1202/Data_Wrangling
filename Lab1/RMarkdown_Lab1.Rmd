@@ -132,6 +132,7 @@ names(resultado) <- c('Clientes_2018',
                       'Pilotos de camión grande',
                       'Clientes con créditos >= 90',
                       'Pilotos de camión pequeño')
+resultado
 
 ```
 

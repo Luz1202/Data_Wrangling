@@ -124,7 +124,28 @@ names(resultado) <- c('Clientes_2018',
                       'Pilotos de camión grande',
                       'Clientes con créditos >= 90',
                       'Pilotos de camión pequeño')
+resultado
 ```
+
+    ## $Clientes_2018
+    ##        Observaciones:                 Moda:      Frecuencia moda: 
+    ##                "2180" "TAQUERIA EL CHINITO"                 "139" 
+    ## 
+    ## $Pilotos_2018
+    ##            Observaciones:                     Moda:          Frecuencia moda: 
+    ##                    "2180" "Fernando Mariano Berrio"                     "267" 
+    ## 
+    ## $`Pilotos de camión grande`
+    ##            Observaciones:                     Moda:          Frecuencia moda: 
+    ##                    "1211" "Fernando Mariano Berrio"                     "157" 
+    ## 
+    ## $`Clientes con créditos >= 90`
+    ##   Observaciones:            Moda: Frecuencia moda: 
+    ##            "661"   "SPORTA, S.A."             "49" 
+    ## 
+    ## $`Pilotos de camión pequeño`
+    ##     Observaciones:              Moda:   Frecuencia moda: 
+    ##              "605" "Felipe Villatoro"               "78"
 
 ## Problema 3
 
