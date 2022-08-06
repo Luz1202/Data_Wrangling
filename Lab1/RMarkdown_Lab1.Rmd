@@ -1,0 +1,155 @@
+---
+title: 'Lab1: Solucion'
+author: "Luz Arevalo"
+date: "2022-08-03"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+library('readxl')
+library("readr")
+library("tidyverse")
+library("tidytext")
+library(plyr)
+library(dplyr)
+library(openxlsx)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Problema 1
+
+
+PASO 1: Obtuve la lista de archivos que deseo unificar
+
+```{r}
+todos <- list.files(path=getwd(),pattern = '.xls')
+```
+
+
+PASO 2: Creé un data.frame padre con las variables definidas
+
+```{r}
+full <- data.frame(COD_VIAJE=double(),
+                   CLIENTE=character(),
+                   UBICACION=double(),
+                   CANTIDAD=double(),
+                   PILOTO=character(),
+                   Q=double(),
+                   CREDITO=double(),
+                   UNIDAD=character(),
+                   Fecha=character())
+```
+
+
+PASO 3: Formé un loop que ejecutar diversas tareas en cada archivo.
+
+```{r warning=FALSE, message=FALSE}
+for (i in 1:length(todos)){
+  
+    #Extraemos la fecha del nombre del archivo
+    fecha <- tools:: file_path_sans_ext(basename(paste(getwd(),
+                                                       todos[i],
+                                                       sep = '//')))
+  
+    #Leemos el archivo
+    temporal <- separate(readxl::read_excel(todos[i]),
+                         CLIENTE,
+                         into=c('CLIENTE',NULL),
+                         sep = '/')
+  
+    #Agregamos la columna 'fecha' que repita la fecha obtenida
+    temporal$Fecha <-
+      rep(fecha,sum(plyr::count(temporal,names(temporal)[1])['freq']))
+  
+    #Creamos un nuevo data.frame con la información de cada archivo
+    df <- data.frame(COD_VIAJE=temporal$COD_VIAJE,
+                        CLIENTE=temporal$CLIENTE,
+                        UBICACION=temporal$UBICACION,
+                        CANTIDAD=temporal$CANTIDAD,
+                        PILOTO=temporal$PILOTO,
+                        Q=temporal$Q,
+                        CREDITO=temporal$CREDITO,
+                        UNIDAD=temporal$UNIDAD,
+                        Fecha=temporal$Fecha)
+  
+    #Unimos el data.frame nuevo al padre
+    full<-full_join(full,df)
+}
+str(full)
+```
+
+
+
+PASO 4: Por último, exporté el data.frame padre en un archivo excel
+
+```{r}
+write.xlsx(full,"Problema_1.xlsx")
+```
+
+
+La cantidad de observaciones en el archivo final es:
+```{r}
+sum(unlist(as.data.frame(laply(full$COD_VIAJE,count))$freq))
+```
+
+
+
+## Problema 2
+
+
+PASO 1: Creé una lista con 5 vectores extraídos del data.frame del problema anterior
+
+```{r}
+mi_lista <- list('CLientes_2018'=unlist(full$CLIENTE),
+                 'Pilotos_2018'=unlist(full$PILOTO),
+                 'Pilotos de camión grande'=unlist(full[full$UNIDAD == 'Camion Grande','PILOTO']),
+                 'Clientes con créditos >=90'=unlist(full[full$CREDITO >= 90,'CLIENTE']),
+                 'Pilotos de camión grande'=unlist(full[full$UNIDAD == 'Camion Pequeño','PILOTO'])
+                 )
+```
+
+
+PASO 2: Formé una función que devuelva la cantidad de elementos, la moda y la frecuencia de la moda de un vector
+
+```{r}
+moda <- function(x){
+  freqs <- table(x)
+  return(c("Observaciones:"=length(x),
+           'Moda:'=names(which.max(freqs)),
+           'Frecuencia moda:'=max(freqs))
+  )
+}
+```
+
+
+PASO 3: Por último, apliqué la función 'moda' a 'mi_lista' y obtenemos una lista con vectores
+
+```{r}
+resultado<-lapply(mi_lista,moda)
+names(resultado) <- c('Clientes_2018',
+                      'Pilotos_2018',
+                      'Pilotos de camión grande',
+                      'Clientes con créditos >= 90',
+                      'Pilotos de camión pequeño')
+
+```
+
+
+
+## Problema 3
+
+
+PASO ÚNICO: Leí el archivo que descargué del portal SAT
+
+```{r message=FALSE, warning=FALSE}
+PV <- read_delim('PV 01-19.txt',
+                 delim = '|',
+                 skip_empty_rows = TRUE,
+                 show_col_types = FALSE)
+
+str(PV,give.attr=FALSE,give.length=FALSE)
+
+```
+
+
