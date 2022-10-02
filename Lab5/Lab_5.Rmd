@@ -1,0 +1,281 @@
+---
+title: "Laboratorio_5"
+author: "Luz Arevalo"
+date: "`r Sys.Date()`"
+always_allow_html: true
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+library(lubridate)
+library(dplyr)
+library(readxl)
+library(readr)
+library(DT)
+```
+
+## Parte 1: Predecir un eclipse solar
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#Variables
+last_eclipse <- ymd_hms("2017 august 21 18:26:40")
+saros <- 223
+synodic <- ddays(29)+dhours(12)+dminutes(44)+dseconds(3)
+
+#Estimación
+next_eclipse <- (synodic*saros)+last_eclipse
+
+# Próximo eclipse
+next_eclipse
+```
+
+## Parte 2: Agrupaciones y operaciones con fechas
+
+Limpieza de datos
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+data <- read_xlsx("data.xlsx")%>%
+  rename_with(~tolower(gsub(" ","_",.x)))%>%
+  rename_with(~tolower(gsub("ó","o",.x)))
+
+transformar <- function(df,col){
+  library(dplyr)
+  library(lubridate)
+  
+  a <- df%>%
+    mutate(temporal = dmy(unlist(data[,col],use.names = FALSE)))%>%
+    filter(!is.na(temporal))%>%
+    select(-one_of(col))
+  
+  names(a)[length(a)] <- col
+  
+  b <- df%>%
+    dplyr::mutate(temporal = as.numeric(unlist(data[,col],use.names = FALSE)))%>%
+    filter(!is.na(temporal))%>%
+    mutate(temporal = as.Date(temporal,origin="1900-01-01"))%>%
+    select(-one_of(col))
+  
+  names(b)[length(b)] <- col
+  
+  return(rbind(a,b))
+}
+
+data <- transformar(data,"fecha_creacion")
+data <- transformar(data,"fecha_final")
+
+
+```
+
+#### Mes en el que hubo más llamadas de determinado código
+
+```{r message=FALSE, warning=FALSE}
+Codigo <- data %>%
+  select(cod)%>%
+  group_by(cod)%>%summarise(n())%>%select(cod)%>%unlist(use.names = FALSE)
+
+Q_1 <- data.frame()
+
+for (i in Codigo){
+  
+  extraer <- data %>%
+    select(fecha_creacion,cod,caller_id)%>%
+    filter(cod == i)%>%
+    mutate(Mes = month(fecha_creacion,label = TRUE,FALSE))%>%
+    group_by(Mes,cod)%>%
+    summarise(Llamadas = n())%>%
+    arrange(desc(Llamadas))
+  
+  Q_1 <- rbind(Q_1,extraer[1,])%>%arrange(desc(Llamadas))
+}
+
+Q_1
+```
+
+#### Día de la semana más ocupado
+
+```{r}
+Q_2 <- data %>%
+  select(fecha_creacion,caller_id)%>%
+  mutate(Dia = weekdays(fecha_creacion))%>%
+  group_by(Dia)%>%
+  summarise(Llamadas = n())%>%
+  arrange(desc(Llamadas))
+
+Q_2%>%
+  head(n=1)
+```
+
+#### Mes más ocupado
+
+```{r}
+Q_3 <- data %>%
+  select(fecha_creacion,caller_id)%>%
+  mutate(Mes = month(fecha_creacion,TRUE,FALSE))%>%
+  group_by(Mes)%>%
+  summarise(Llamadas = n())%>%
+  arrange(desc(Llamadas))
+
+Q_3%>%
+  head(n=1)
+```
+
+#### Comportamiento de las llamadas
+
+```{r message=FALSE, warning=FALSE}
+Q_4 <- data%>%
+  select(fecha_creacion,caller_id)%>%
+  group_by(fecha_creacion)%>%
+  summarise(Llamadas = n())
+
+Q_4%>%
+  select(fecha_creacion,Llamadas)%>%
+  plot("fecha_creacion","Llamadas",type="line")
+```
+
+
+```{r message=FALSE, warning=FALSE}
+Q_4%>%
+  filter(Llamadas>1000)%>%
+  mutate(Dia = paste(day(fecha_creacion),month(fecha_creacion,TRUE,FALSE)))%>%
+  select(Dia,Llamadas)
+
+```
+
+Hay alta concentración de llamadas los días 13 y 14 de cada mes, es decir, que el número de llamadas muestran dependencia a dos días antes de la quincena de cada mes.
+
+#### Duración promedio de una llamada
+
+```{r}
+data%>%
+  select(fecha_final,hora_final,fecha_creacion,hora_creacion)%>%
+  summarise(Duracion = mean(difftime(hora_final,hora_creacion,tz="UTC",units = "mins")))
+```
+
+
+#### Distribución de la duración de llamadas
+
+```{r}
+data%>%
+  select(fecha_final,hora_final,fecha_creacion,hora_creacion)%>%
+  summarise(Duracion = difftime(hora_final,hora_creacion,tz="UTC",units = "mins"))%>%
+  group_by(Duracion)%>%
+  summarise(Freq = n())
+
+```
+
+
+## Parte 3: Signo Zodiacal
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#### Data frame ####
+zod_f <- data.frame(From= mdy(c("Jan 20 2000","Feb 19 2000","Mar 21 2000",
+                              "Apr 20 2000","May 21 2000","Jun 21 2000",
+                              "Jul 23 2000","Aug 23 2000", "Sep 23 2000",
+                              "Oct 23 2000","Nov 22 2000","Dec 22 2000")),
+                       To = mdy(c("Feb 18 2000","Mar 20 2000","Apr 19 2000",
+                              "May 20 2000","Jun 20 2000", "Jul 22 2000",
+                              "Aug 22 2000", "Sep 22 2000","Oct 22 2000", 
+                              "Nov 21 2000","Dec 21 2000", "Jan 19 2000")), 
+                       Sig = c("Acuario","Piscis","Aries","Tauro",
+                               "Geminis","Cancer","Leo","Virgo",
+                               "Libra","Escorpio","Sagitario","Capricornio"))
+
+#### Function ####
+
+zod <- function(x){
+  
+  if(!is.na(dmy(x))){
+    if(months(month(dmy(x)))+days(day(dmy(x))) >= months(12)+days(22) |
+       months(month(dmy(x)))+days(day(dmy(x))) <= months(1)+days(19)){
+      
+      library(dplyr)
+      library(stringr)
+      a <- zod_f %>%
+      filter(months(month(zod_f$From))+days(day(zod_f$From)) >=
+               months(12)+days(22) |
+               months(month(zod_f$To))+days(day(zod_f$To)) <=
+               months(1)+days(19))
+      
+    cat("Fecha de nacimiento:",
+        day(dmy(x)),toString(month(dmy(x),label = TRUE)),year(dmy(x)),
+        "\nSu signo sodiacal es:",a[,3],
+        "\n\nSi la fecha no es correcta asegúrese de haberla ingresado de la forma: d/m/y")
+      
+    } else{
+    library(dplyr)
+    a <- zod_f %>%
+      filter(months(month(zod_f$From))+days(day(zod_f$From)) <=
+               months(month(dmy(x)))+days(day(dmy(x))) &
+               months(month(zod_f$To))+days(day(zod_f$To)) >=
+               months(month(dmy(x)))+days(day(dmy(x))))
+    
+    cat("Fecha de nacimiento:",
+        day(dmy(x)),toString(month(dmy(x),label = TRUE)),year(dmy(x)),
+        "\nSu signo zodiacal:",a[,3],
+        "\n\nSi la fecha no es correcta asegúrese de haberla ingresado de la forma: d/m/y")
+    
+  }} else {
+    print("Ingrese su fecha de nacimiento de la forma: d/m/y")
+  }
+}
+#### Uso ####
+zod("24 12 2002")
+```
+
+
+## Parte 4: Flights
+
+
+#### Columnas nuevas
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(nycflights13)
+vuelos <- flights
+
+#### Función para convertirlo a horas ####
+n_col <- function(df,col.objetivo,col.name){
+  v1 <- df%>%
+    mutate(temp = nchar(as.character(unlist(df[,col.objetivo]))))%>%
+    filter(!is.na(temp))
+  
+  v2 <- v1%>%
+    filter(temp==4)%>%
+    mutate(temporal = paste(substring(unlist(v1[v1[,"temp"]==4,col.objetivo]),1,2),
+                            substring(unlist(v1[v1[,"temp"]==4,col.objetivo]),3,4),sep = ":"))
+  
+  v3 <- v1%>%
+    filter(temp==3)%>%
+    mutate(temporal = paste(substring(unlist(v1[v1[,"temp"]==3,col.objetivo]),1,1),
+                            substring(unlist(v1[v1[,"temp"]==3,col.objetivo]),2,3),sep = ":"))
+  
+  v4 <- v1%>%
+    filter(temp==2)%>%
+    mutate(temporal = paste("00",substring(unlist(v1[v1[,"temp"]==2,col.objetivo]),1,2),sep = ":"))
+  
+  v5 <- v1%>%
+    filter(temp==1)%>%
+    mutate(temporal = paste("00:0",substring(unlist(v1[v1[,"temp"]==1,col.objetivo]),1,1),sep = ""))
+  
+  v1 <- rbind(v2,v3,v4,v5)
+  v1[,"temporal"] <- hm(v1$temporal)
+  names(v1)[length(v1)] <- col.name
+  return(v1%>%
+           select(-temp))
+}
+
+vuelos <- n_col(vuelos,"dep_time","dep_time_2")
+vuelos <- n_col(vuelos,"sched_dep_time","sched_dep_time_2")
+vuelos <- n_col(vuelos,"arr_time","arr_time_2")
+vuelos <- n_col(vuelos,"sched_arr_time","sched_arr_time_2")
+
+vuelos[,20:23]
+
+```
+
+
+#### Atraso total
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+vuelos <- vuelos%>%
+  mutate(delay_total = minutes(dep_delay+arr_delay))
+
+vuelos[,"delay_total"]
+```
