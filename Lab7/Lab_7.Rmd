@@ -142,7 +142,7 @@ data.frame(Costo= c("Fijo","Variable"),USD= c(sum(data2022$costo_fijo),sum(data2
 ## Comportamiento por tipo de servicio
 ```{r}
 # Tipo de servicio
-serv <- dataset%>%
+serv <- data2021%>%
   group_by(cod)%>%
   dplyr::summarise(venta = sum(factura),
                    fijo = sum(costo_fijo),
@@ -151,7 +151,7 @@ serv <- dataset%>%
   arrange(n)
 
 # Tipo de vehiculo
-vh <- dataset%>%
+vh <- data2021%>%
   group_by(vehiculo)%>%
   dplyr::summarise(venta = sum(factura),
                    fijo = sum(costo_fijo),
@@ -198,7 +198,11 @@ data2022%>%
 
 data2022%>%
   mutate(utilidad = factura-costo_fijo-costo_directo)%>%
-  filter(utilidad<0)
+  filter(utilidad<0)%>%
+  group_by(vehiculo,cod)%>%
+  dplyr::summarise(perdida = sum(utilidad)/12,
+                   n = n()/12)%>%
+  write.csv("perdidas.csv")
 
 ```
 
