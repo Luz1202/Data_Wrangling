@@ -174,6 +174,14 @@ data2021%>%
                    n = n())%>%
   arrange(n)
 
+data2021%>%
+  group_by(mes = month(fecha,label = TRUE),
+           origen)%>%
+  filter(vehiculo == "pickup")%>%
+  dplyr::summarise(venta = sum(factura),
+                   fijo = sum(costo_fijo),
+                   variable = sum(costo_directo),
+                   n = n()/30)
 ```
 
 ## Comportamiento del costo por vehiculo
@@ -188,4 +196,16 @@ data2022%>%
                    n = n())%>%
   arrange(n)
 
+data2022%>%
+  mutate(utilidad = factura-costo_fijo-costo_directo)%>%
+  filter(utilidad<0)
+
 ```
+
+## 80-20
+```{r}
+data2022%>%
+  group_by(id)%>%
+  dplyr::summarise(ventas = sum(factura))
+```
+
