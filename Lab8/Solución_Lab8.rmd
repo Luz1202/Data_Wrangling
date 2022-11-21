@@ -1,0 +1,84 @@
+---
+title: "Missing Data and Feature Engineering"
+author: "Luz Arevalo - 20200392"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+# Dataframe
+df <- read.csv("titanic_MD.csv", stringsAsFactors = FALSE)
+df_R <- read.csv("titanic.csv", stringsAsFactors = FALSE)
+
+# Librerías
+library(dplyr)
+library(mice)
+```
+
+## Parte 1
+
+#### 1. Missing values report
+
+```{r missing_values, include=FALSE}
+missing_values <- NULL
+summary(df)
+
+unique(df$PassengerId)
+unique(df$Survived)
+unique(df$Pclass)
+unique(df$Name)
+unique(df$Age)
+unique(df$Sex)
+unique(df$SibSp)
+unique(df$Embarked)
+unique(df$Parch)
+unique(df$Ticket)
+unique(df$Fare)
+unique(df$Cabin)
+
+missing_values<- data.frame(Age = c(Age = length(df[is.na(df[,"Age"]),"Age"])))
+missing_values<- append(missing_values,c(Sex = length(df[df[,"Sex"]=="?","Sex"])))
+missing_values<- append(missing_values,c(SibSp = length(df$SibSp[is.na(df$SibSp)])))
+missing_values<- append(missing_values,c(Embarked = length(df$Embarked[df$Embarked==""])))
+missing_values<- append(missing_values,c(Parch = length(df$Parch[is.na(df$Parch)])))
+missing_values<- append(missing_values,c(Survived = length(df$Survived[is.na(df$Survived)])))
+missing_values<- append(missing_values,c(Pclass = length(df$Pclass[is.na(df$Pclass)])))
+missing_values<- append(missing_values,c(PassengerId = length(df$PassengerId[is.na(df$PassengerId)])))
+missing_values<- append(missing_values,c(Name = length(df$Name[is.na(df$Name)])))
+missing_values<- append(missing_values,c(Ticket = length(df$Ticket[is.na(df$Ticket)])))
+missing_values<- append(missing_values,c(Fare = length(df$Fare[is.na(df$Fare)])))
+missing_values<- append(missing_values,c(Cabin = length(df$Cabin[is.na(df$Cabin)])))
+
+```
+```{r}
+for (i in names(missing_values)) {
+  print(paste("Missing values in ",i,":",missing_values[i]))
+}
+```
+
+
+
+#### Métodos
+
+Los métodos utilizados en las columnas con valores perdidos serían los siguientes:
+
+Para la columna Sexo utilizaría imputación sectorizada por la moda, la sectorizacion sería por medio de la variable de supervivencia, porque de esta manera los valores de sexo serán reemplazados con valores que contienen aproximaciones a los valores reales.
+
+Para la columna de Edad utilizaría un standar deviation approach para hacer “Cap” de los outliers y una imputación general por la media, porque este tipo de valores no es posible determinarlo con precisión por medio de una regresión lineal. Con este método se respeta la distribución de los datos. 
+
+Para las columnas SibSp y Parch utilizaría una imputación general por la moda, porque los valores faltantes de esta variable son menos del 10% de los datos, por lo que no afectaría significativamente las probabilidades de cada valor. 
+Para la columna Fare utilizaría una imputación por regresión, donde las variables explicativas serían variables dummy Class y Embarked, porque se esperaría obtener una explicación bastante aproximada de los datos reales. 
+
+Finalmente, para Embarked utilizaría una imputación general por la moda, porque los valores faltantes de esta variable también son menos del 10% de los datos, por lo que no afectaría significativamente las probabilidades de cada valor. 
+
+No se consideran los métodos de Deletion (listwise), porque las observaciones disponibles son pocas y cada una podría agregar valor. Las columnas de Name y PassangerId no pueden ser determinadas, por lo que se utilizarían métodos de pairwaise si hiciera falta alguno. Survived y Pclass se haría imputación por regresión. Ticket y Cabin se haría con imputación sectorizada (con la clase del pasajero y puerto de embarque) por la moda, porque son valores categóricos.
+
+#### Casos completos
+
+```{r }
+cc <- df[complete.cases(df),]
+cat("Número de casos completos:",nrow(cc))
+```
+
+## Parte_2
+
